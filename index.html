@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LifeTogether 🏠 RP [FAMILIES] - Kompletní 3D Hra & Chytrý Voice Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+    #canvas-container { width: 100vw; height: 100vh; display: block; }
+    .bubble { transform: translate(-50%, -100%); pointer-events: none; transition: opacity 0.15s; }
+    .phone-scroll::-webkit-scrollbar { width: 4px; }
+    .phone-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-white">
+
+  <!-- 3D WebGL Viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- 3D Floating Character Labels & Speech Bubbles -->
+  <div id="aiLabel" class="bubble fixed top-0 left-0 z-10 flex flex-col items-center">
+    <div id="aiSpeechBubble" class="hidden mb-2 max-w-sm bg-white text-slate-900 font-semibold text-sm px-4 py-2.5 rounded-2xl shadow-2xl border-2 border-cyan-400 text-center leading-snug"></div>
+    <div class="bg-slate-900/90 backdrop-blur px-3 py-1 rounded-full border border-cyan-400/50 text-xs font-bold text-cyan-300 flex items-center gap-1.5 shadow-lg">
+      <span id="aiVoiceDot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+      <span id="aiRoleTag">🤖 Antigravity • Brácha</span>
+    </div>
+  </div>
+
+  <div id="playerLabel" class="bubble fixed top-0 left-0 z-10 flex flex-col items-center">
+    <div id="playerSpeechBubble" class="hidden mb-2 max-w-sm bg-yellow-300 text-slate-950 font-semibold text-sm px-3.5 py-2 rounded-2xl shadow-2xl text-center leading-snug"></div>
+    <div class="bg-slate-900/90 backdrop-blur px-3 py-1 rounded-full border border-yellow-400/50 text-xs font-bold text-yellow-300 flex items-center gap-1.5 shadow-lg">
+      <span id="playerVoiceDot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+      <span id="playerRoleTag">👦 Ty • Hlava rodiny</span>
+    </div>
+  </div>
+
+  <!-- Top Bar: Authentic LifeTogether 🏠 RP [FAMILIES] Header -->
+  <div class="fixed top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+    <div class="bg-white/95 text-slate-900 backdrop-blur-md border border-slate-300 rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3 pointer-events-auto">
+      <span class="text-2xl">🏠</span>
+      <div>
+        <h1 class="font-extrabold text-base tracking-tight text-slate-900">LifeTogether 🏠 RP [FAMILIES]</h1>
+        <p id="locationStatus" class="text-xs text-emerald-600 font-bold">📍 Město Wildwood • Rodinná Vila</p>
+      </div>
+      <div class="h-6 w-px bg-slate-300 mx-1"></div>
+      <button onclick="toggleDayNight()" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer hover:bg-slate-800 transition">
+        ☀️ Den / 🌙 Noc
+      </button>
+      <button onclick="triggerHorn()" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold cursor-pointer hover:bg-amber-400 transition">
+        📣 Klakson [H]
+      </button>
+    </div>
+
+    <!-- Controls Legend -->
+    <div class="bg-slate-900/85 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2 text-xs text-slate-200 shadow-xl leading-snug">
+      <div><b>W / S</b> = Dopředu / Dozadu | <b>A / D</b> = Doleva / Doprava</div>
+      <div><b>E</b> = Interakce | <b>Mezerník</b> = Skok | <b>V</b> = Mikrofon 🎙️</div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDEBAR: Authentic LifeTogether Virtual Smartphone with App Tabs -->
+  <div class="fixed right-3 top-20 bottom-24 z-20 w-72 bg-slate-900/95 backdrop-blur-xl border-4 border-slate-700 rounded-[32px] p-3 shadow-2xl flex flex-col pointer-events-auto">
+    <!-- Phone Speaker Notch & Status -->
+    <div class="w-20 h-1.5 bg-slate-700 rounded-full mx-auto mb-1.5"></div>
+    <div class="flex items-center justify-between text-[11px] text-slate-400 px-2 mb-2">
+      <span id="phoneClock">12:00</span>
+      <span class="font-bold text-white">📱 LifeTogether OS</span>
+      <span>📶 100%</span>
+    </div>
+
+    <!-- Phone App Navigation Bar -->
+    <div class="grid grid-cols-5 gap-1 bg-slate-800 p-1 rounded-2xl mb-2.5 text-xs font-bold">
+      <button onclick="switchPhoneTab('ai')" id="tabBtn_ai" class="py-1.5 rounded-xl bg-cyan-600 text-white cursor-pointer" title="AI Parťák & Řidič">🤖 AI</button>
+      <button onclick="switchPhoneTab('cars')" id="tabBtn_cars" class="py-1.5 rounded-xl text-slate-300 hover:bg-slate-700 cursor-pointer" title="Vozidla">🚗 Auta</button>
+      <button onclick="switchPhoneTab('house')" id="tabBtn_house" class="py-1.5 rounded-xl text-slate-300 hover:bg-slate-700 cursor-pointer" title="Dům & Místnosti">🏠 Dům</button>
+      <button onclick="switchPhoneTab('family')" id="tabBtn_family" class="py-1.5 rounded-xl text-slate-300 hover:bg-slate-700 cursor-pointer" title="Rodina, Postava & Batoh">👨‍👦 RP</button>
+      <button onclick="switchPhoneTab('map')" id="tabBtn_map" class="py-1.5 rounded-xl text-slate-300 hover:bg-slate-700 cursor-pointer" title="Mapa města Wildwood">🗺️ GPS</button>
+    </div>
+
+    <!-- TAB 1: AI Partner, Chauffeur & Activities -->
+    <div id="phoneTab_ai" class="flex-1 overflow-y-auto phone-scroll pr-1 flex flex-col gap-2 text-xs">
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-cyan-400 mb-1.5">🛞 AI Řidič (Odvez mě autem)</div>
+        <div class="flex flex-col gap-1">
+          <button onclick="aiStartDriving('tour')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-1.5 px-2.5 rounded-xl cursor-pointer text-left">
+            🚗 Řiď auto ty! (Okružní jízda)
+          </button>
+          <div class="grid grid-cols-2 gap-1 mt-0.5">
+            <button onclick="aiStartDriving('school')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🏫 Do Školy</button>
+            <button onclick="aiStartDriving('market')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🛒 Do Obchodu</button>
+            <button onclick="aiStartDriving('hospital')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🏥 Do Nemocnice</button>
+            <button onclick="aiStartDriving('police')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🚓 K Policii</button>
+            <button onclick="aiStartDriving('camp')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🏕️ Do Kempu</button>
+            <button onclick="aiStartDriving('home')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🏠 Domů k Vile</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-emerald-400 mb-1.5">🏠 Co má AI parťák dělat?</div>
+        <div class="grid grid-cols-2 gap-1">
+          <button onclick="aiGoTo('follow', 'Jdu hned s tebou!')" class="bg-emerald-600/30 border border-emerald-500/40 text-emerald-200 py-1.5 px-2 rounded-lg font-semibold cursor-pointer text-left">🤝 Pojď se mnou</button>
+          <button onclick="aiGoTo('wait', 'Dobře, počkám tady na místě.')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">✋ Počkej tady</button>
+          <button onclick="aiGoTo('tv', 'Jdu si sednout do obýváku k televizi!')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">📺 Jdi na TV</button>
+          <button onclick="aiGoTo('kitchen', 'Jdu do kuchyně uvařit jídlo pro rodinu!')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🍳 Jdi vařit</button>
+          <button onclick="aiGoTo('bedroom', 'Jdu do pokoje do postele.')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🛏️ Jdi spát</button>
+          <button onclick="aiGoTo('pool', 'Jdu se vykoupat do bazénu!')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2 rounded-lg cursor-pointer text-left">🏊‍♂️ Do bazénu</button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-amber-400 mb-1.5">🎬 Emoce & Animace</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button onclick="doEmote('wave')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">👋 Zamávat</button>
+          <button onclick="doEmote('dance')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🕺 Tanec</button>
+          <button onclick="doEmote('jump')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">⭐ Výskok</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Vehicles App -->
+    <div id="phoneTab_cars" class="hidden flex-1 overflow-y-auto phone-scroll pr-1 flex flex-col gap-2 text-xs">
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-rose-400 mb-1.5 flex items-center justify-between">
+          <span>🚗 Spawnout Vozidlo</span>
+          <button onclick="toggleCarLock()" id="btnCarLock" class="text-[11px] bg-slate-700 px-2 py-0.5 rounded text-emerald-300 cursor-pointer">🔓 Odemčeno</button>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <button onclick="spawnCar('sport', 0xdc2626, 'Červený Roadster', false)" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-xl cursor-pointer flex items-center justify-between">
+            <span>🏎️ <b>Červený Roadster</b></span><span class="text-slate-400">Rychlý</span>
+          </button>
+          <button onclick="spawnCar('lambo', 0xeab308, 'Zlaté Lamborghini', false)" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-xl cursor-pointer flex items-center justify-between">
+            <span>✨ <b>Zlaté Lamborghini</b></span><span class="text-amber-300">Turbo</span>
+          </button>
+          <button onclick="spawnCar('suv', 0x1e293b, 'Černé Rodinné SUV', false)" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-xl cursor-pointer flex items-center justify-between">
+            <span>🚙 <b>Rodinné SUV 4x4</b></span><span class="text-slate-400">Rodina</span>
+          </button>
+          <button onclick="spawnCar('police', 0x2563eb, 'Policejní Speciál', true)" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-xl cursor-pointer flex items-center justify-between">
+            <span>🚓 <b>Policejní Speciál</b></span><span class="text-blue-300">Majáky</span>
+          </button>
+          <button onclick="spawnCar('fire', 0xb91c1c, 'Hasičský Vůz', true)" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-xl cursor-pointer flex items-center justify-between">
+            <span>🚒 <b>Hasičský Vůz</b></span><span class="text-red-300">Siréna</span>
+          </button>
+          <button onclick="spawnCar('ambulance', 0xf8fafc, 'Sanitka Záchranka', true)" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-xl cursor-pointer flex items-center justify-between">
+            <span>🚑 <b>Sanitka Nemocnice</b></span><span class="text-emerald-300">Lékař</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: House Customization & Smart Home -->
+    <div id="phoneTab_house" class="hidden flex-1 overflow-y-auto phone-scroll pr-1 flex flex-col gap-2 text-xs">
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-emerald-400 mb-1.5">🏡 Styl Rodinného Domu</div>
+        <div class="flex flex-col gap-1">
+          <button onclick="setHouseTheme(0xf8fafc, 0xd97706, 'Moderní Bílá Vila')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🏡 Moderní Bílá Vila</button>
+          <button onclick="setHouseTheme(0xfef3c7, 0x92400e, 'Teplý Rodinný Dům')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🏠 Teplý Rodinný Dům</button>
+          <button onclick="setHouseTheme(0x334155, 0x0f172a, 'Luxusní Tmavý Penthaus')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">💎 Luxusní Tmavý Penthaus</button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-amber-400 mb-1.5">🔑 Smart Home Ovládání</div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="toggleHouseLock()" id="btnHouseLock" class="bg-slate-700 hover:bg-slate-600 py-2 px-2 rounded-xl cursor-pointer font-semibold text-emerald-300">🔓 Dveře: Otevřeno</button>
+          <button onclick="toggleHouseLights()" id="btnHouseLights" class="bg-slate-700 hover:bg-slate-600 py-2 px-2 rounded-xl cursor-pointer font-semibold text-yellow-300">💡 Světla: ZAP</button>
+          <button onclick="toggleTVPower()" class="bg-slate-700 hover:bg-slate-600 py-2 px-2 rounded-xl cursor-pointer font-semibold text-cyan-300">📺 Přepnout TV</button>
+          <button onclick="togglePartyLights()" class="bg-slate-700 hover:bg-slate-600 py-2 px-2 rounded-xl cursor-pointer font-semibold text-purple-300">🎉 Párty Světla</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Family RP Roles, Age & Backpack -->
+    <div id="phoneTab_family" class="hidden flex-1 overflow-y-auto phone-scroll pr-1 flex flex-col gap-2 text-xs">
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-amber-400 mb-1.5">👨‍👩‍👦 Věk & Role v Rodině</div>
+        <div class="grid grid-cols-3 gap-1 mb-1.5">
+          <button onclick="setPlayerSize(1.0, 'Rodič')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">👨 Rodič</button>
+          <button onclick="setPlayerSize(0.88, 'Teenager')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">👦 Teen</button>
+          <button onclick="setPlayerSize(0.62, 'Dítě')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">👶 Dítě</button>
+        </div>
+        <div class="grid grid-cols-2 gap-1">
+          <button onclick="setFamilyRoles('Brácha', 'Brácha')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg cursor-pointer">👦 Bráchové</button>
+          <button onclick="setFamilyRoles('Táta', 'Syn')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg cursor-pointer">👨 Táta & Syn</button>
+          <button onclick="setFamilyRoles('Syn', 'Táta')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg cursor-pointer">🧒 Syn & Táta</button>
+          <button onclick="setFamilyRoles('Spolubydlící', 'Kámoš')" class="bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg cursor-pointer">🤝 Kámoši</button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-purple-400 mb-1.5">🎒 Batoh (Předměty do ruky)</div>
+        <div class="grid grid-cols-3 gap-1">
+          <button onclick="equipItem('none')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">✋ Nic</button>
+          <button onclick="equipItem('phone')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">📱 Mobil</button>
+          <button onclick="equipItem('box')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">📦 Krabice</button>
+          <button onclick="equipItem('pizza')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🍕 Pizza</button>
+          <button onclick="equipItem('burger')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🍔 Burger</button>
+          <button onclick="equipItem('bag')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🛍️ Nákup</button>
+          <button onclick="equipItem('teddy')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🧸 Medvěd</button>
+          <button onclick="equipItem('flashlight')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🔦 Baterka</button>
+          <button onclick="equipItem('guitar')" class="bg-slate-700 hover:bg-slate-600 py-1 rounded-lg cursor-pointer">🎸 Kytara</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Wildwood GPS Fast Travel Map -->
+    <div id="phoneTab_map" class="hidden flex-1 overflow-y-auto phone-scroll pr-1 flex flex-col gap-2 text-xs">
+      <div class="bg-slate-800/90 rounded-2xl p-2.5 border border-white/10">
+        <div class="font-bold text-teal-400 mb-1.5">🗺️ Město Wildwood (Rychlý přesun)</div>
+        <div class="flex flex-col gap-1">
+          <button onclick="teleportTo(0, 6, '🏠 Rodinná Vila')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🏠 Naše Rodinná Vila</button>
+          <button onclick="teleportTo(76, -18, '🏫 Škola Wildwood High')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🏫 Škola Wildwood High</button>
+          <button onclick="teleportTo(0, -68, '🛒 Supermarket Fresh')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🛒 Supermarket Fresh</button>
+          <button onclick="teleportTo(-76, -18, '🏥 Městská Nemocnice')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🏥 Městská Nemocnice</button>
+          <button onclick="teleportTo(-55, 38, '🚓 Policejní & Hasičská Stanice')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🚓 Policie & Hasiči</button>
+          <button onclick="teleportTo(55, 42, '🏕️ Kemp Wildwood & Jezero')" class="bg-slate-700 hover:bg-slate-600 py-1.5 px-2.5 rounded-lg cursor-pointer text-left">🏕️ Kemp & Jezero</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Interactive Context Prompt Pill -->
+  <div id="contextPrompt" onclick="triggerContextAction()" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-20 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-6 py-2.5 rounded-full shadow-2xl border-2 border-white/30 cursor-pointer pointer-events-auto transition">
+    [E] Interakce
+  </div>
+
+  <!-- Bottom Voice Chat Control Center -->
+  <div class="fixed bottom-3 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4 pointer-events-none">
+    <div class="bg-slate-900/95 backdrop-blur-lg border border-white/20 rounded-2xl p-3 shadow-2xl flex flex-col gap-2 pointer-events-auto">
+      
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <button id="btnMicMain" onclick="toggleVoiceChat()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg cursor-pointer transition active:scale-95">
+            <span>🎙️</span>
+            <span id="micBtnText">Zapnout Voice Chat (Mikrofon [V])</span>
+          </button>
+
+          <label class="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800 px-2.5 py-2 rounded-xl border border-white/10 cursor-pointer">
+            <input type="checkbox" id="chkContinuous" checked class="accent-emerald-500 w-3.5 h-3.5 cursor-pointer" />
+            <span>Stálý mikrofon</span>
+          </label>
+        </div>
+
+        <button id="btnMuteAI" onclick="toggleMuteAI()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-white/10 cursor-pointer">
+          🔊 Hlas AI: ZAP
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div id="micStatusBox" class="text-xs font-medium text-emerald-400 bg-black/40 px-3 py-1.5 rounded-xl border border-white/10 shrink-0">
+          🎙️ Připraveno (Mluv česky)
+        </div>
+        <form id="chatForm" class="flex-1 flex items-center gap-1.5">
+          <input
+            id="chatInput"
+            type="text"
+            placeholder="Mluv do mikrofonu [V] nebo napiš cokoliv sem (jako v ChatGPT)..."
+            class="flex-1 bg-black/40 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+          />
+          <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs px-3 py-1.5 rounded-xl cursor-pointer">
+            Říct 💬
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Phone Tabs Switcher
+    function switchPhoneTab(tab) {
+      ['ai', 'cars', 'house', 'family', 'map'].forEach(t => {
+        document.getElementById('phoneTab_' + t).classList.add('hidden');
+        document.getElementById('tabBtn_' + t).className = 'py-1.5 rounded-xl text-slate-300 hover:bg-slate-700 cursor-pointer';
+      });
+      document.getElementById('phoneTab_' + tab).classList.remove('hidden');
+      document.getElementById('tabBtn_' + tab).className = 'py-1.5 rounded-xl bg-cyan-600 text-white cursor-pointer';
+    }
+
+    // Sound Effects (Horn, Siren, Door)
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    function playBeep(freq, type, dur, vol = 0.08) {
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        g.gain.setValueAtTime(vol, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + dur);
+      } catch (e) {}
+    }
+
+    function triggerHorn() {
+      playBeep(340, 'sawtooth', 0.25, 0.12);
+      setTimeout(() => playBeep(420, 'sawtooth', 0.3, 0.12), 120);
+    }
+
+    // =========================================================
+    // 1. VOICE CHAT & DEEP CONTEXTUAL AI BRAIN (ChatGPT-style Memory & Reasoning)
+    // =========================================================
+    let aiVoiceMuted = false;
+    let isMicListening = false;
+    let isAiSpeaking = false;
+    let shouldKeepListening = false;
+
+    const btnMicMain = document.getElementById('btnMicMain');
+    const micBtnText = document.getElementById('micBtnText');
+    const micStatusBox = document.getElementById('micStatusBox');
+    const chkContinuous = document.getElementById('chkContinuous');
+    const btnMuteAI = document.getElementById('btnMuteAI');
+    const aiSpeechBubble = document.getElementById('aiSpeechBubble');
+    const playerSpeechBubble = document.getElementById('playerSpeechBubble');
+    const aiVoiceDot = document.getElementById('aiVoiceDot');
+    const playerVoiceDot = document.getElementById('playerVoiceDot');
+
+    let aiBubbleTimeout = null;
+    let playerBubbleTimeout = null;
+
+    // Conversation Memory & Context State (with ChatGPT-like message history)
+    const convMemory = {
+      playerRole: 'Hlava rodiny',
+      aiRole: 'Brácha',
+      lastQuestionAskedByAI: null,
+      activeRiddleAnswer: null,
+      turnCount: 0,
+      history: []
+    };
+
+    // Call Real Cloud LLM (OpenAI GPT via Pollinations) for any open-ended conversation!
+    async function askRealLLM(userText, placeName) {
+      try {
+        micStatusBox.innerText = '🧠 Přemýšlím...';
+        const sysPrompt = `Jsi kamarádský parťák jménem Antigravity ve 3D hře LifeTogether RP (jako na Robloxu). Hraješ roli "${convMemory.aiRole}" a hráč (tvůj parťák) má roli "${convMemory.playerRole}". Právě se nacházíte: ${placeName}. Odpovídej VŽDY česky, přirozeně, chytře (jako ChatGPT) a stručně (1 až 2 věty), protože tvůj text se čte nahlas hlasem.`;
+
+        const messages = [
+          { role: 'system', content: sysPrompt },
+          ...convMemory.history.slice(-6),
+          { role: 'user', content: userText }
+        ];
+
+        const url = 'https://text.pollinations.ai/' + encodeURIComponent(
+          `${sysPrompt}\nHráč říká: "${userText}"\nOdpověz česky (1-2 věty):`
+        );
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5500);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const reply = (await res.text()).trim();
+          if (reply && !reply.includes('Free limit reached') && reply.length > 2) {
+            convMemory.history.push({ role: 'user', content: userText });
+            convMemory.history.push({ role: 'assistant', content: reply });
+            micStatusBox.innerText = '✅ "' + userText + '"';
+            return reply;
+          }
+        }
+      } catch (e) {}
+      micStatusBox.innerText = '✅ "' + userText + '"';
+      return null;
+    }
+
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    function showAiBubble(text, speakIt = true) {
+      aiSpeechBubble.innerText = text;
+      aiSpeechBubble.classList.remove('hidden');
+      clearTimeout(aiBubbleTimeout);
+      aiBubbleTimeout = setTimeout(() => {
+        aiSpeechBubble.classList.add('hidden');
+      }, 10000);
+
+      if (speakIt && !aiVoiceMuted && ('speechSynthesis' in window)) {
+        try {
+          window.speechSynthesis.cancel();
+          const clean = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+          const utter = new SpeechSynthesisUtterance(clean);
+          utter.lang = 'cs-CZ';
+          const voices = window.speechSynthesis.getVoices();
+          const cz = voices.find(v => v.lang && v.lang.toLowerCase().includes('cs'));
+          if (cz) utter.voice = cz;
+          utter.rate = 1.06;
+          utter.pitch = 1.02;
+
+          utter.onstart = () => {
+            isAiSpeaking = true;
+            aiVoiceDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+          };
+          utter.onend = () => {
+            isAiSpeaking = false;
+            aiVoiceDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+            if (shouldKeepListening && chkContinuous.checked && !isMicListening) {
+              setTimeout(() => { startMicRecognition(); }, 250);
+            }
+          };
+          utter.onerror = () => {
+            isAiSpeaking = false;
+            aiVoiceDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+          };
+          window.speechSynthesis.speak(utter);
+        } catch (e) {}
+      }
+    }
+
+    function showPlayerBubble(text) {
+      playerSpeechBubble.innerText = text;
+      playerSpeechBubble.classList.remove('hidden');
+      clearTimeout(playerBubbleTimeout);
+      playerBubbleTimeout = setTimeout(() => {
+        playerSpeechBubble.classList.add('hidden');
+      }, 6500);
+    }
+
+    function toggleMuteAI() {
+      aiVoiceMuted = !aiVoiceMuted;
+      if (aiVoiceMuted && ('speechSynthesis' in window)) {
+        window.speechSynthesis.cancel();
+        isAiSpeaking = false;
+      }
+      btnMuteAI.innerText = aiVoiceMuted ? '🔇 Hlas AI: VYP' : '🔊 Hlas AI: ZAP';
+    }
+
+    // Web Speech API Microphone
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'cs-CZ';
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        isMicListening = true;
+        playerVoiceDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+        btnMicMain.className = 'flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow-lg cursor-pointer animate-pulse';
+        micBtnText.innerText = 'Poslouchám tě... (Vypnout)';
+        micStatusBox.innerText = '🎙️ Mluv normálně česky...';
+      };
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) finalTranscript += t;
+          else interim += t;
+        }
+        if (interim) micStatusBox.innerText = '🎙️ "' + interim + '..."';
+        if (finalTranscript.trim()) {
+          const said = finalTranscript.trim();
+          micStatusBox.innerText = '✅ "' + said + '"';
+          try { recognition.stop(); } catch (e) {}
+          handleSmartConversation(said);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        isMicListening = false;
+        playerVoiceDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          shouldKeepListening = false;
+          micStatusBox.innerText = '⚠️ Povol mikrofon nahoře u adresy prohlížeče!';
+        } else if (event.error === 'no-speech' && shouldKeepListening && chkContinuous.checked && !isAiSpeaking) {
+          setTimeout(() => { startMicRecognition(); }, 200);
+        }
+      };
+
+      recognition.onend = () => {
+        isMicListening = false;
+        playerVoiceDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+        if (shouldKeepListening && chkContinuous.checked && !isAiSpeaking) {
+          setTimeout(() => { startMicRecognition(); }, 250);
+        } else if (!shouldKeepListening) {
+          btnMicMain.className = 'flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg cursor-pointer';
+          micBtnText.innerText = 'Zapnout Voice Chat (Mikrofon [V])';
+        }
+      };
+    }
+
+    function startMicRecognition() {
+      if (!recognition || isMicListening || isAiSpeaking) return;
+      try { recognition.start(); } catch (e) {}
+    }
+
+    function toggleVoiceChat() {
+      if (!recognition) return;
+      if (shouldKeepListening || isMicListening) {
+        shouldKeepListening = false;
+        try { recognition.stop(); } catch (e) {}
+        btnMicMain.className = 'flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg cursor-pointer';
+        micBtnText.innerText = 'Zapnout Voice Chat (Mikrofon [V])';
+        micStatusBox.innerText = '🎙️ Mikrofon vypnutý';
+      } else {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        isAiSpeaking = false;
+        shouldKeepListening = true;
+        startMicRecognition();
+      }
+    }
+
+    function norm(str) {
+      return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function getCurrentPlaceName() {
+      const px = carState.driver ? carState.x : playerState.x;
+      const pz = carState.driver ? carState.z : playerState.z;
+      if (px > -18 && px < 14 && pz > -16 && pz < 12) return 'doma v naší vile';
+      if (Math.hypot(px - 80, pz - (-18)) < 26) return 've škole Wildwood High';
+      if (Math.hypot(px - 0, pz - (-72)) < 26) return 'v supermarketu';
+      if (Math.hypot(px - (-80), pz - (-18)) < 26) return 'v nemocnici';
+      if (Math.hypot(px - (-55), pz - 42) < 26) return 'u policejní a hasičské stanice';
+      if (Math.hypot(px - 55, pz - 45) < 26) return 'v kempu u jezera';
+      return 'venku na ulici ve městě Wildwood';
+    }
+
+    // Riddles & Jokes Database
+    const riddles = [
+      { q: 'Mám zuby, ale nekoušu. Co jsem?', a: 'hreben', label: 'Hřeben!' },
+      { q: 'Čím víc z toho ubíráš, tím je to větší. Co je to?', a: 'dira', label: 'Díra!' },
+      { q: 'Běží to kolem celého domu, ale vůbec se to nehýbe. Co je to?', a: 'plot', label: 'Plot!' }
+    ];
+
+    // =========================================================================
+    // DEEP CONVERSATIONAL & SITUATIONAL AI ENGINE
+    // Understands context, follow-up answers, math, riddles, roleplay & actions
+    // =========================================================================
+    function handleSmartConversation(rawText) {
+      showPlayerBubble(rawText);
+      const n = norm(rawText);
+      convMemory.turnCount++;
+
+      const addressPlayer = convMemory.playerRole === 'Táta' ? 'tati' : (convMemory.playerRole === 'Syn' ? 'synku' : 'kámo');
+
+      // 0. Check if user is answering an active riddle!
+      if (convMemory.lastQuestionAskedByAI === 'RIDDLE' && convMemory.activeRiddleAnswer) {
+        if (n.includes(convMemory.activeRiddleAnswer.a)) {
+          convMemory.lastQuestionAskedByAI = null;
+          showAiBubble(`Přesně tak, uhodl jsi to! Je to ${convMemory.activeRiddleAnswer.label} Jsi fakt dobrý!`);
+          return;
+        } else if (n.includes('nevim') || n.includes('vzda') || n.includes('rekni')) {
+          const ans = convMemory.activeRiddleAnswer.label;
+          convMemory.lastQuestionAskedByAI = null;
+          showAiBubble(`Správná odpověď byla: ${ans} Dáme další hádanku, nebo pojedeme někam autem?`);
+          return;
+        }
+      }
+
+      // 1. Check if user can solve a math question (e.g. "kolik je 15 krat 4" / "kolik je 12 + 8")
+      const mathMatch = n.replace(/krat/g, '*').replace(/plus/g, '+').replace(/minus/g, '-').replace(/deleno/g, '/').match(/(-?\d+)\s*([\+\-\*\/])\s*(-?\d+)/);
+      if (mathMatch) {
+        const a = parseFloat(mathMatch[1]);
+        const op = mathMatch[2];
+        const b = parseFloat(mathMatch[3]);
+        let res = 0;
+        if (op === '+') res = a + b;
+        if (op === '-') res = a - b;
+        if (op === '*') res = a * b;
+        if (op === '/') res = b !== 0 ? (a / b).toFixed(1) : 'nekonečno';
+        showAiBubble(`To je jednoduché, ${a} ${op} ${b} je přesně ${res}! Zkoušíš mě z matiky, ${addressPlayer}?`);
+        return;
+      }
+
+      // 2. Check if user is answering "WHERE_TO_DRIVE" follow-up!
+      if (convMemory.lastQuestionAskedByAI === 'WHERE_TO_DRIVE') {
+        convMemory.lastQuestionAskedByAI = null;
+        if (n.includes('skol')) { aiStartDriving('school'); return; }
+        if (n.includes('obchod') || n.includes('nakup') || n.includes('market')) { aiStartDriving('market'); return; }
+        if (n.includes('nemocnic') || n.includes('doktor')) { aiStartDriving('hospital'); return; }
+        if (n.includes('polic') || n.includes('hasic')) { aiStartDriving('police'); return; }
+        if (n.includes('kemp') || n.includes('jezer') || n.includes('stan') || n.includes('plaz')) { aiStartDriving('camp'); return; }
+        if (n.includes('dom') || n.includes('vil')) { aiStartDriving('home'); return; }
+      }
+
+      // 3. Driving & Vehicle Control Intents
+      if (
+        n.includes('ridit') || n.includes('rydit') || n.includes('ridis') || n.includes('rydis') ||
+        n.includes('rid ') || n.includes('odvez') || n.includes('svez') || n.includes('volant') ||
+        (n.includes('auto') && (n.includes('ty') || n.includes('nebude') || n.includes('vezm')))
+      ) {
+        if (n.includes('ja ') || n.includes('budu ja') || n.includes('pust me')) {
+          carState.driver = 'player';
+          showAiBubble(`Dobře ${addressPlayer}, přesedám si na místo spolujezdce a řídíš ty!`);
+          return;
+        }
+        if (n.includes('skol')) { aiStartDriving('school'); return; }
+        if (n.includes('obchod') || n.includes('nakup') || n.includes('market')) { aiStartDriving('market'); return; }
+        if (n.includes('nemocnic') || n.includes('doktor')) { aiStartDriving('hospital'); return; }
+        if (n.includes('polic') || n.includes('hasic')) { aiStartDriving('police'); return; }
+        if (n.includes('kemp') || n.includes('jezer')) { aiStartDriving('camp'); return; }
+        if (n.includes('dom')) { aiStartDriving('home'); return; }
+
+        // Start driving and ask where specifically they want to go!
+        convMemory.lastQuestionAskedByAI = 'WHERE_TO_DRIVE';
+        aiStartDriving('tour', `Jasně ${addressPlayer}, sedám za volant a řídím já! Chceš hodit do školy, do supermarketu, do nemocnice, do kempu u jezera, nebo se jen tak projíždět?`);
+        return;
+      }
+
+      // Direct destination requests ("jedeme do školy", "zajedeme do obchodu", "odvez mě do kempu")
+      if (n.includes('do skoly') || n.includes('ke skole')) { aiStartDriving('school'); return; }
+      if (n.includes('do obchodu') || n.includes('nakoupit') || n.includes('supermarket')) { aiStartDriving('market'); return; }
+      if (n.includes('do nemocnice') || n.includes('k doktorovi') || n.includes('zlomil') || n.includes('boli me')) {
+        spawnCar('ambulance', 0xf8fafc, 'Sanitka Záchranka', true);
+        aiStartDriving('hospital', `Sakra, slyším že potřebuješ doktora! Beru sanitku, zapínám majáky a vezu tě rychle do Městské nemocnice!`);
+        return;
+      }
+      if (n.includes('hori') || n.includes('pozar') || n.includes('hasic')) {
+        spawnCar('fire', 0xb91c1c, 'Hasičský Vůz', true);
+        aiEquipProp('flashlight');
+        showAiBubble(`Požární poplach! Přistavil jsem před dům hasičské auto se sirénou, jdeme hasit!`);
+        return;
+      }
+      if (n.includes('zlodej') || n.includes('polici') || n.includes('zatkn')) {
+        spawnCar('police', 0x2563eb, 'Policejní Speciál', true);
+        aiStartDriving('police', `Volám policejní hlídku! Nasedej do policejního speciálu se zapnutými majáky!`);
+        return;
+      }
+      if (n.includes('kemp') || n.includes('jezer') || n.includes('stanov') || n.includes('ohn')) {
+        aiStartDriving('camp');
+        return;
+      }
+      if (n.includes('zpatky domu') || n.includes('jedeme domu') || n.includes('vrat se domu')) {
+        aiStartDriving('home');
+        return;
+      }
+
+      // Stopping / Exiting Car / Horn
+      if (n.includes('zatroub') || n.includes('klakson') || n.includes('houk')) {
+        triggerHorn();
+        showAiBubble('Tút túúút! Klakson funguje parádně!');
+        return;
+      }
+      if (n.includes('zastav') || n.includes('stuj') || n.includes('pockej') || n.includes('vystup')) {
+        if (carState.driver) {
+          carState.speed = 0;
+          carState.aiWaypoints = [];
+          if (n.includes('vystup')) exitCarIfInOne();
+          showAiBubble(`Zastavil jsem auto přesně tady, ${addressPlayer}. Co uděláme teď?`);
+        } else {
+          aiGoTo('wait', `Dobře ${addressPlayer}, zastavil jsem a čekám tady na tebe.`);
+        }
+        return;
+      }
+
+      // 4. Smart Home & House Room Commands (Lock, Lights, TV, Kitchen, Bedroom, Pool)
+      if (n.includes('zamkn') || n.includes('odemkn') || n.includes('dvere')) {
+        toggleHouseLock();
+        showAiBubble(houseLocked ? 'Zamknul jsem vchodové dveře našeho domu, nikdo cizí sem teď nevleze!' : 'Odemknul jsem dům, dveře jsou volné!');
+        return;
+      }
+      if (n.includes('zhasn') || n.includes('rozsvit') || n.includes('svetl')) {
+        toggleHouseLights();
+        showAiBubble(houseLightsOn ? 'Rozsvítil jsem světla v celém domě!' : 'Zhasnul jsem světla v domě, teď je tu pěkné přítmí.');
+        return;
+      }
+      if (n.includes('noc') || n.includes('vecer') || n.includes('tma')) {
+        if (!isNightMode) toggleDayNight();
+        showAiBubble('Přepnul jsem na noc, venku teď svítí hvězdy a pouliční lampy!');
+        return;
+      }
+      if (n.includes('den') || n.includes('rano') || n.includes('slunce')) {
+        if (isNightMode) toggleDayNight();
+        showAiBubble('Dobré ráno! Venku už zase svítí slunce.');
+        return;
+      }
+      if (n.includes('obyvak') || n.includes('telk') || n.includes('televiz') || n.includes('gauc') || n.includes('film')) {
+        exitCarIfInOne();
+        tvOn = true;
+        tvScreenMesh.material.color.setHex(0x38bdf8);
+        aiGoTo('tv', `Jdu do obýváku na gauč a zapínám televizi! Dávají tam akční film, pojď si sednout vedle mě!`);
+        return;
+      }
+      if (n.includes('kuchy') || n.includes('hlad') || n.includes('hlat') || n.includes('pizz') || n.includes('burger') || n.includes('snidan') || n.includes('vecer') || n.includes('uvar')) {
+        exitCarIfInOne();
+        aiEquipProp('pizza');
+        equipItem('pizza');
+        aiGoTo('kitchen', `Hned to bude, ${addressPlayer}! Došel jsem k lednici, ohřál jsem čerstvou pizzu a podal jsem jeden kousek i tobě do ruky. Dobrou chuť!`);
+        return;
+      }
+      if (n.includes('spat') || n.includes('postel') || n.includes('pokoj') || n.includes('loznic') || n.includes('unaven') || n.includes('ukol')) {
+        exitCarIfInOne();
+        aiGoTo('bedroom', `Dobře ${addressPlayer}, jdu do ložnice k posteli a hernímu počítači!`);
+        return;
+      }
+      if (n.includes('bazen') || n.includes('plav') || n.includes('zahrad') || n.includes('koupat')) {
+        exitCarIfInOne();
+        aiGoTo('pool', `Super nápad, jdeme dozadu na zahradu skočit do bazénu!`);
+        return;
+      }
+      if (n.includes('pojd se mnou') || n.includes('pojd sem') || n.includes('za mnou') || n.includes('ke mne')) {
+        exitCarIfInOne();
+        aiGoTo('follow', `Už běžím přímo za tebou, ${addressPlayer}!`);
+        return;
+      }
+
+      // 5. Role Switching via Voice ("já jsem táta a ty jsi syn", "buď můj brácha")
+      if (n.includes('ja jsem tata') || n.includes('ty jsi syn') || n.includes('bud syn')) {
+        setFamilyRoles('Táta', 'Syn');
+        return;
+      }
+      if (n.includes('ty jsi tata') || n.includes('ja jsem syn') || n.includes('bud tata')) {
+        setFamilyRoles('Syn', 'Táta');
+        return;
+      }
+      if (n.includes('brach') || n.includes('bratr')) {
+        setFamilyRoles('Brácha', 'Brácha');
+        return;
+      }
+
+      // 6. Riddles, Jokes, Stories & Deep Chat
+      if (n.includes('hadank') || n.includes('hadej')) {
+        const r = riddles[Math.floor(Math.random() * riddles.length)];
+        convMemory.lastQuestionAskedByAI = 'RIDDLE';
+        convMemory.activeRiddleAnswer = r;
+        showAiBubble(`Tak poslouchej hádanku: ${r.q} Víš co to je?`);
+        return;
+      }
+      if (n.includes('vtip') || n.includes('sranda') || n.includes('rozesmej')) {
+        const jokesList = [
+          'Přijde pán k doktorovi v nemocnici Wildwood a říká: Pane doktore, nikdo mě neposlouchá! A doktor řekne: Další prosím!',
+          'Ptá se učitel ve škole Wildwood: Pepíčku, řekni mi dvě zájmena! Pepíček vyskočí: Kdo, já? A učitel: Výborně, za jedna!',
+          'Proč nemůžou hrát kostlivci v Robloxu hororovky? Protože na to nemají nervy!'
+        ];
+        showAiBubble(jokesList[Math.floor(Math.random() * jokesList.length)]);
+        return;
+      }
+      if (n.includes('kde jsme') || n.includes('kde jsi') || n.includes('kde to jsme')) {
+        const place = getCurrentPlaceName();
+        showAiBubble(`Právě teď jsme ${place}. Chceš zůstat tady, nebo popojedeme autem někam jinam?`);
+        return;
+      }
+      if (n.includes('kdo jsi') || n.includes('jak se jmenujes') || n.includes('kolik ti je')) {
+        showAiBubble(`Jsem Antigravity, tvůj parťák v LifeTogether RP! Právě teď hraju roli "${convMemory.aiRole}" a ty jsi "${convMemory.playerRole}".`);
+        return;
+      }
+      if (n.includes('chat gpt') || n.includes('chatgpt') || n.includes('inteligenc') || n.includes('chytr')) {
+        showAiBubble(`Snažím se ti rozumět úplně přirozeně! Můžeš mi dávat úkoly v domě, poslat mě řídit auto kamkoliv po městě, dávat mi matiku, hádanky nebo hrát rodinné příběhy.`);
+        return;
+      }
+      if (n.includes('ahoj') || n.includes('cau') || n.includes('nazdar') || n.includes('dobry den')) {
+        const place = getCurrentPlaceName();
+        showAiBubble(`Čau ${addressPlayer}! Jsme zrovna ${place}. Co dneska podnikneme? Můžu nás hodit autem do školy, na nákup, do kempu, nebo si uděláme pohodu doma!`);
+        return;
+      }
+      if (n.includes('jak se mas') || n.includes('co delas')) {
+        const place = getCurrentPlaceName();
+        showAiBubble(`Mám se super! Jsem tu s tebou ${place} a poslouchám, co vymyslíme za akci. Jak se dneska daří tobě?`);
+        return;
+      }
+
+      // 7. For ANY open-ended question, story, roleplay or conversation:
+      // Call the Real Cloud LLM (GPT) with full context of our 3D world and roles!
+      const place = getCurrentPlaceName();
+      askRealLLM(rawText, place).then(llmReply => {
+        if (llmReply) {
+          showAiBubble(llmReply);
+        } else {
+          // Smart offline/cooldown fallback based on sentence structure
+          if (n.includes('proc ')) {
+            showAiBubble(`Protože tady ve světě LifeTogether je možné úplně všechno, ${addressPlayer}! Co vyzkoušíme dál?`);
+          } else if (n.includes('jak ')) {
+            showAiBubble(`Úplně jednoduše, ${addressPlayer} – vpravo na telefonu máš aplikace na auta, dům i rodinu, nebo mi stačí říct a zařídím to!`);
+          } else if (n.includes('?')) {
+            showAiBubble(`To je dobrá otázka, ${addressPlayer}! Myslím, že tady ${place} to zvládneme na jedničku.`);
+          } else {
+            showAiBubble(`Jasně, chápu tě (${rawText})! Jsme teď ${place} – řekni kam vyrazíme nebo co podnikneme dál!`);
+          }
+        }
+      });
+    }
+
+    document.getElementById('chatForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const inp = document.getElementById('chatInput');
+      const val = inp.value.trim();
+      if (!val) return;
+      inp.value = '';
+      handleSmartConversation(val);
+    });
+
+    function setFamilyRoles(pRole, aRole) {
+      convMemory.playerRole = pRole;
+      convMemory.aiRole = aRole;
+      document.getElementById('playerRoleTag').innerText = `👦 Ty • ${pRole}`;
+      document.getElementById('aiRoleTag').innerText = `🤖 Antigravity • ${aRole}`;
+      showAiBubble(`Super, přepnul jsem naše role! Ty jsi teď ${pRole} a já jsem ${aRole}.`);
+    }
+
+    // =========================================================
+    // 2. THREE.JS COMPLETE WILDWOOD CITY & FURNISHED VILLA
+    // =========================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x60a5fa);
+    scene.fog = new THREE.FogExp2(0x60a5fa, 0.0028);
+
+    const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 650);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfffbeb, 0.85);
+    sunLight.position.set(55, 110, 65);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    const d = 105;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    scene.add(sunLight);
+
+    const homeWarmLight = new THREE.PointLight(0xfef08a, 1.3, 40);
+    homeWarmLight.position.set(0, 6, 0);
+    scene.add(homeWarmLight);
+
+    let isNightMode = false;
+    let houseLightsOn = true;
+    let partyLightsActive = false;
+
+    function toggleDayNight() {
+      isNightMode = !isNightMode;
+      if (isNightMode) {
+        scene.background.setHex(0x090d1a);
+        scene.fog.color.setHex(0x090d1a);
+        ambientLight.intensity = 0.25;
+        sunLight.intensity = 0.15;
+        homeWarmLight.intensity = houseLightsOn ? 2.4 : 0;
+      } else {
+        scene.background.setHex(0x60a5fa);
+        scene.fog.color.setHex(0x60a5fa);
+        ambientLight.intensity = 0.7;
+        sunLight.intensity = 0.85;
+        homeWarmLight.intensity = houseLightsOn ? 1.2 : 0;
+      }
+    }
+
+    function toggleHouseLights() {
+      houseLightsOn = !houseLightsOn;
+      partyLightsActive = false;
+      homeWarmLight.color.setHex(0xfef08a);
+      homeWarmLight.intensity = houseLightsOn ? (isNightMode ? 2.4 : 1.2) : 0;
+      document.getElementById('btnHouseLights').innerText = houseLightsOn ? '💡 Světla: ZAP' : '🌑 Světla: VYP';
+    }
+
+    function togglePartyLights() {
+      partyLightsActive = !partyLightsActive;
+      houseLightsOn = true;
+      showAiBubble(partyLightsActive ? 'Párty LED osvětlení v domě je zapnuté!' : 'Párty světla vypnuta.');
+    }
+
+    function addBox(parent, w, h, d, x, y, z, color, cast = true) {
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshLambertMaterial({ color })
+      );
+      m.position.set(x, y, z);
+      m.castShadow = cast;
+      m.receiveShadow = true;
+      parent.add(m);
+      return m;
+    }
+
+    // World Lawn
+    const grass = new THREE.Mesh(
+      new THREE.PlaneGeometry(450, 450),
+      new THREE.MeshLambertMaterial({ color: 0x22c55e })
+    );
+    grass.rotation.x = -Math.PI / 2;
+    grass.receiveShadow = true;
+    scene.add(grass);
+
+    // Wildwood City Road Network
+    addBox(scene, 152, 0.08, 12, 0, 0.04, 24, 0x334155, false);
+    addBox(scene, 152, 0.08, 12, 0, 0.04, -60, 0x334155, false);
+    addBox(scene, 12, 0.08, 96, 70, 0.04, -18, 0x334155, false);
+    addBox(scene, 12, 0.08, 96, -70, 0.04, -18, 0x334155, false);
+    addBox(scene, 8, 0.09, 16, 16, 0.045, 14, 0x64748b, false);
+
+    // =========================================================
+    // WILDWOOD CITY BUILDINGS (Furnished & Enterable!)
+    // =========================================================
+    // 1. 🏫 Wildwood High School (East: X = 92, Z = -18)
+    addBox(scene, 22, 0.25, 32, 92, 0.12, -18, 0xfef3c7, false); // School floor
+    addBox(scene, 22, 9, 0.5, 92, 4.5, -34, 0xd97706); // North wall
+    addBox(scene, 22, 9, 0.5, 92, 4.5, -2, 0xd97706);  // South wall
+    addBox(scene, 0.5, 9, 32, 103, 4.5, -18, 0xd97706);// East wall with Chalkboard
+    addBox(scene, 0.3, 4, 12, 102.5, 4.5, -18, 0x064e3b); // Green Chalkboard!
+    // Classroom Desks inside School
+    for (let rz = -24; rz <= -12; rz += 6) {
+      addBox(scene, 3.0, 1.2, 4.0, 88, 0.6, rz, 0xb45309);
+      addBox(scene, 3.0, 1.2, 4.0, 95, 0.6, rz, 0xb45309);
+    }
+
+    // 2. 🛒 Wildwood Fresh Supermarket (North: X = 0, Z = -82)
+    addBox(scene, 34, 0.25, 20, 0, 0.12, -82, 0xf8fafc, false);
+    addBox(scene, 34, 8, 0.5, 0, 4, -92, 0x16a34a);
+    addBox(scene, 0.5, 8, 20, -17, 4, -82, 0x16a34a);
+    addBox(scene, 0.5, 8, 20, 17, 4, -82, 0x16a34a);
+    // Grocery Shelves stocked with items
+    addBox(scene, 8, 3.5, 1.8, -6, 1.75, -84, 0xf59e0b);
+    addBox(scene, 8, 3.5, 1.8,  6, 1.75, -84, 0xef4444);
+    addBox(scene, 4, 1.6, 2.0, -10, 0.8, -75, 0x334155); // Checkout Counter
+
+    // 3. 🏥 Wildwood Hospital (West: X = -92, Z = -18)
+    addBox(scene, 22, 0.25, 28, -92, 0.12, -18, 0xe0f2fe, false);
+    addBox(scene, 22, 10, 0.5, -92, 5, -32, 0xf8fafc);
+    addBox(scene, 0.5, 10, 28, -103, 5, -18, 0xf8fafc);
+    addBox(scene, 6, 1.5, 0.5, -92, 8, -31.6, 0xef4444); // Red Cross
+    addBox(scene, 1.5, 6, 0.5, -92, 8, -31.6, 0xef4444);
+    // Hospital Beds inside
+    addBox(scene, 4.5, 1.1, 2.6, -96, 0.6, -22, 0x38bdf8);
+    addBox(scene, 4.5, 1.1, 2.6, -96, 0.6, -14, 0x38bdf8);
+
+    // 4. 🚓 Police & Fire Station (South-West: X = -55, Z = 48)
+    addBox(scene, 26, 8, 16, -55, 4, 48, 0x1d4ed8);
+    addBox(scene, 28, 1.5, 18, -55, 8.5, 48, 0xef4444);
+
+    // 5. 🏕️ Wildwood Lake & Campfire (South-East: X = 55, Z = 48)
+    const lake = new THREE.Mesh(
+      new THREE.CircleGeometry(18, 32),
+      new THREE.MeshLambertMaterial({ color: 0x0284c7 })
+    );
+    lake.rotation.x = -Math.PI / 2;
+    lake.position.set(68, 0.05, 52);
+    scene.add(lake);
+    // Campfire & Tent
+    addBox(scene, 5, 4, 5, 45, 2, 52, 0xf97316); // Orange Tent
+    addBox(scene, 1.8, 1.8, 1.8, 52, 0.9, 44, 0xff5500); // Campfire
+
+    // =========================================================
+    // OUR FURNISHED FAMILY VILLA (Center: X [-16, 12], Z [-14, 10])
+    // =========================================================
+    const house = new THREE.Group();
+    scene.add(house);
+
+    const houseFloorMesh = addBox(house, 28, 0.3, 24, -2, 0.15, -2, 0xd97706, false);
+    const houseWallMeshes = [
+      addBox(house, 28, 5.5, 0.5, -2, 2.75, -14, 0xf8fafc),
+      addBox(house, 0.5, 5.5, 24, -16, 2.75, -2, 0xf8fafc),
+      addBox(house, 0.5, 5.5, 13, 12, 2.75, 3.5, 0xf8fafc),
+      addBox(house, 11, 2.2, 0.5, -10.5, 1.1, 10, 0xf8fafc),
+      addBox(house, 11, 2.2, 0.5, 6.5, 1.1, 10, 0xf8fafc),
+      addBox(house, 11, 3.8, 0.4, -10.5, 1.9, -2, 0xe2e8f0)
+    ];
+    // Front Door Mesh (closes when House is Locked!)
+    const frontDoorMesh = addBox(house, 6, 3.5, 0.35, -2, 1.75, 10, 0x78350f);
+    frontDoorMesh.visible = false;
+
+    function setHouseTheme(wallHex, floorHex, name) {
+      houseFloorMesh.material.color.setHex(floorHex);
+      houseWallMeshes.forEach(w => w.material.color.setHex(wallHex));
+      showAiBubble(`Změnili jsme vzhled našeho domu na: ${name}!`);
+    }
+
+    // Living Room Furniture
+    addBox(house, 9, 0.08, 7, -9, 0.32, 4, 0x1e40af, false);
+    addBox(house, 6.5, 0.9, 2.0, -9, 0.75, 6.8, 0xdc2626);
+    addBox(house, 6.5, 1.8, 0.5, -9, 1.2, 7.6, 0xb91c1c);
+    addBox(house, 3.5, 0.7, 1.6, -9, 0.65, 3.8, 0x78350f);
+    addBox(house, 4.8, 2.6, 0.25, -9, 2.5, -1.7, 0x0f172a);
+    const tvScreenMesh = addBox(house, 4.4, 2.2, 0.28, -9, 2.5, -1.68, 0x38bdf8, false);
+    let tvOn = true;
+
+    function toggleTVPower() {
+      tvOn = !tvOn;
+      tvScreenMesh.material.color.setHex(tvOn ? 0x38bdf8 : 0x111827);
+    }
+
+    // Kitchen Furniture
+    addBox(house, 11.5, 0.06, 11, 5.5, 0.31, 4, 0xfef3c7, false);
+    addBox(house, 2.2, 4.4, 2.0, 10.2, 2.4, -0.5, 0xcbd5e1);
+    addBox(house, 6.5, 1.8, 1.8, 5.2, 1.1, -0.5, 0x475569);
+    addBox(house, 1.8, 0.1, 1.4, 4.5, 2.05, -0.5, 0xef4444);
+    addBox(house, 4.2, 1.4, 2.8, 5.2, 0.9, 5.2, 0xb45309);
+    addBox(house, 1.2, 0.15, 1.2, 5.2, 1.68, 5.2, 0xf97316);
+
+    // Bedroom Furniture
+    addBox(house, 3.2, 0.9, 4.6, -13.2, 0.75, -10.5, 0xfacc15);
+    addBox(house, 2.8, 0.4, 1.2, -13.2, 1.3, -12.0, 0xffffff);
+    addBox(house, 3.2, 0.9, 4.6, -7.8, 0.75, -10.5, 0x38bdf8);
+    addBox(house, 2.8, 0.4, 1.2, -7.8, 1.3, -12.0, 0xffffff);
+    addBox(house, 3.4, 1.5, 1.6, -3.2, 0.95, -12.5, 0x1e293b);
+    addBox(house, 1.8, 1.2, 0.2, -3.2, 2.3, -12.9, 0x22c55e);
+
+    // Backyard Pool
+    addBox(house, 14, 0.2, 12, 6, 0.1, -8, 0xe2e8f0, false);
+    addBox(house, 10, 0.22, 8, 6, 0.14, -8, 0x06b6d4, false);
+
+    const interactiveSpots = [
+      { id: 'couch', name: 'Sednout na gauč & Přepnout TV 📺', x: -9, z: 5.5, sitY: 1.1, rotY: 0 },
+      { id: 'kitchen', name: 'Vzít teplou Pizzu z kuchyně 🍕', x: 5.2, z: 2.2, sitY: 0, rotY: 0 },
+      { id: 'bed', name: 'Lehnout si do postele 🛏️', x: -13.2, z: -10.5, sitY: 1.1, rotY: 0 },
+      { id: 'pool', name: 'Vykoupat se v bazénu 🏊‍♂️', x: 6, z: -8, sitY: -0.3, rotY: 0 },
+      { id: 'school_desk', name: 'Sednout si do školní lavice 🏫', x: 88, z: -18, sitY: 0.8, rotY: -Math.PI / 2 },
+      { id: 'market_buy', name: 'Vzít nákupní tašku v Supermarketu 🛍️', x: -6, z: -80, sitY: 0, rotY: 0 },
+      { id: 'hospital_bed', name: 'Lehnout si na vyšetření v Nemocnici 🏥', x: -96, z: -18, sitY: 0.9, rotY: Math.PI / 2 }
+    ];
+
+    // =========================================================
+    // 3. AVATARS, PROPS & VEHICLES WITH SIRENS
+    // =========================================================
+    function createAvatar(colors) {
+      const root = new THREE.Group();
+      const head = addBox(root, 1.1, 1.1, 1.1, 0, 3.25, 0, colors.head);
+      addBox(root, 0.18, 0.18, 0.05, -0.25, 3.35, -0.56, 0x111827, false);
+      addBox(root, 0.18, 0.18, 0.05,  0.25, 3.35, -0.56, 0x111827, false);
+
+      const torso = addBox(root, 1.5, 1.5, 0.8, 0, 1.95, 0, colors.torso);
+      const leftArm = addBox(root, 0.55, 1.45, 0.65, -1.05, 1.95, 0, colors.arms);
+      const rightArm = addBox(root, 0.55, 1.45, 0.65, 1.05, 1.95, 0, colors.arms);
+      const leftLeg = addBox(root, 0.68, 1.2, 0.72, -0.4, 0.6, 0, colors.legs);
+      const rightLeg = addBox(root, 0.68, 1.2, 0.72, 0.4, 0.6, 0, colors.legs);
+
+      const propMesh = addBox(root, 0.8, 0.6, 0.8, 1.05, 1.8, -0.75, 0xf97316);
+      propMesh.visible = false;
+
+      return { root, head, leftArm, rightArm, leftLeg, rightLeg, propMesh };
+    }
+
+    const playerAvatar = createAvatar({ head: 0xfde047, torso: 0x2563eb, arms: 0xfde047, legs: 0x1e293b });
+    scene.add(playerAvatar.root);
+
+    const aiAvatar = createAvatar({ head: 0x38bdf8, torso: 0x0f172a, arms: 0x38bdf8, legs: 0x334155 });
+    scene.add(aiAvatar.root);
+
+    function setPlayerSize(scale, roleLabel) {
+      playerAvatar.root.scale.set(scale, scale, scale);
+      convMemory.playerRole = roleLabel;
+      document.getElementById('playerRoleTag').innerText = `👦 Ty • ${roleLabel}`;
+      showAiBubble(`Změnil sis věk postavy na: ${roleLabel}!`);
+    }
+
+    function equipItem(type) {
+      if (type === 'none') {
+        playerAvatar.propMesh.visible = false;
+        return;
+      }
+      playerAvatar.propMesh.visible = true;
+      const colors = {
+        phone: 0x0f172a, box: 0xd97706, pizza: 0xf97316, burger: 0xb45309,
+        bag: 0xec4899, teddy: 0x92400e, flashlight: 0xfef08a, guitar: 0xdc2626
+      };
+      playerAvatar.propMesh.material.color.setHex(colors[type] || 0xfacc15);
+    }
+
+    function aiEquipProp(type) {
+      aiAvatar.propMesh.visible = type !== 'none';
+      const colors = { phone: 0x0f172a, pizza: 0xf97316, flashlight: 0xfef08a };
+      aiAvatar.propMesh.material.color.setHex(colors[type] || 0xf97316);
+    }
+
+    let danceTimer = 0;
+    function doEmote(type) {
+      if (type === 'jump') {
+        playerState.vy = 0.3;
+        aiState.vy = 0.3;
+      } else if (type === 'dance') {
+        danceTimer = 180;
+        showAiBubble('Tancujeme spolu! 🕺✨');
+      } else if (type === 'wave') {
+        playerAvatar.rightArm.rotation.x = -2.4;
+        aiAvatar.rightArm.rotation.x = -2.4;
+        showAiBubble('Ahoj! 👋');
+      }
+    }
+
+    // Car Group with Emergency Siren Bar
+    const carGroup = new THREE.Group();
+    const carChassis = addBox(carGroup, 3.8, 1.2, 6.6, 0, 0.9, 0, 0xdc2626);
+    const carGlass = addBox(carGroup, 3.2, 0.9, 2.8, 0, 1.8, 0.2, 0x7dd3fc);
+    addBox(carGroup, 0.7, 0.35, 0.15, -1.2, 1.0, -3.32, 0xfef08a, false);
+    addBox(carGroup, 0.7, 0.35, 0.15,  1.2, 1.0, -3.32, 0xfef08a, false);
+    addBox(carGroup, 0.8, 0.3, 0.15, -1.2, 1.0, 3.32, 0x991b1b, false);
+    addBox(carGroup, 0.8, 0.3, 0.15,  1.2, 1.0, 3.32, 0x991b1b, false);
+    const sirenBarMesh = addBox(carGroup, 1.8, 0.35, 0.45, 0, 2.4, 0, 0xef4444, false);
+    sirenBarMesh.visible = false;
+    scene.add(carGroup);
+
+    let carLocked = false;
+    let houseLocked = false;
+    function toggleCarLock() {
+      carLocked = !carLocked;
+      playBeep(carLocked ? 420 : 620, 'sine', 0.1);
+      document.getElementById('btnCarLock').innerText = carLocked ? '🔒 Zamčeno' : '🔓 Odemčeno';
+    }
+    function toggleHouseLock() {
+      houseLocked = !houseLocked;
+      frontDoorMesh.visible = houseLocked;
+      playBeep(houseLocked ? 320 : 540, 'triangle', 0.12);
+      document.getElementById('btnHouseLock').innerText = houseLocked ? '🔒 Dveře: Zamčeno' : '🔓 Dveře: Otevřeno';
+    }
+
+    const playerState = { x: -4, y: 0.3, z: 6, vy: 0, rotY: 0, walkCycle: 0 };
+    const aiState = { x: -6.8, y: 0.3, z: 6, vy: 0, rotY: 0, walkCycle: 0, targetMode: 'follow', targetX: -6.8, targetZ: 6 };
+
+    const carState = {
+      x: 16, z: 16, rotY: 0, speed: 0,
+      name: 'Červený Roadster',
+      hasSiren: false,
+      driver: null,
+      aiWaypoints: []
+    };
+
+    function spawnCar(style, colorHex, label, hasSiren = false) {
+      carChassis.material.color.setHex(colorHex);
+      carChassis.scale.y = (style === 'suv' || style === 'fire' || style === 'ambulance') ? 1.4 : 1.0;
+      sirenBarMesh.visible = hasSiren;
+      carState.hasSiren = hasSiren;
+      carState.name = label;
+      if (!carState.driver) {
+        carState.x = playerState.x + 4.5;
+        carState.z = playerState.z;
+        carState.rotY = camYaw;
+        carState.speed = 0;
+      }
+      playBeep(520, 'sine', 0.12);
+      showAiBubble(`Přistavil jsem k nám: ${label}!`);
+    }
+
+    function teleportTo(tx, tz, label) {
+      exitCarIfInOne();
+      playerState.x = tx;
+      playerState.z = tz;
+      aiState.x = tx + 2.8;
+      aiState.z = tz;
+      carState.x = tx + 6.5;
+      carState.z = tz + 2;
+      document.getElementById('locationStatus').innerText = `📍 Město Wildwood • ${label}`;
+      playBeep(660, 'sine', 0.12);
+    }
+
+    function exitCarIfInOne() {
+      if (carState.driver) {
+        carState.driver = null;
+        carState.speed = 0;
+        playerState.x = carState.x - 3.2;
+        playerState.z = carState.z;
+        aiState.x = carState.x + 3.2;
+        aiState.z = carState.z;
+      }
+    }
+
+    // AI Chauffeur Driving System
+    window.aiStartDriving = function(dest, customSpeech = null) {
+      carState.driver = 'ai';
+      if (dest === 'school') {
+        carState.aiWaypoints = [{ x: 16, z: 24 }, { x: 70, z: 24 }, { x: 70, z: -18 }];
+        showAiBubble(customSpeech || 'Sedni si vedle mě, řídím já! Vezu nás autem do Školy Wildwood High!');
+      } else if (dest === 'market') {
+        carState.aiWaypoints = [{ x: 16, z: 24 }, { x: 70, z: 24 }, { x: 70, z: -60 }, { x: 0, z: -60 }];
+        showAiBubble(customSpeech || 'Sedám za volant a řídím! Jedeme nakoupit jídlo do Supermarketu!');
+      } else if (dest === 'hospital') {
+        carState.aiWaypoints = [{ x: 16, z: 24 }, { x: -70, z: 24 }, { x: -70, z: -18 }];
+        showAiBubble(customSpeech || 'Řídím já! Vezu nás do Městské Nemocnice!');
+      } else if (dest === 'police') {
+        carState.aiWaypoints = [{ x: 16, z: 24 }, { x: -45, z: 24 }, { x: -45, z: 36 }];
+        showAiBubble(customSpeech || 'Jedu k Policejní a Hasičské stanici!');
+      } else if (dest === 'camp') {
+        carState.aiWaypoints = [{ x: 16, z: 24 }, { x: 48, z: 24 }, { x: 48, z: 40 }];
+        showAiBubble(customSpeech || 'Jedu s námi do Kempu Wildwood k jezeru a táboráku!');
+      } else if (dest === 'home') {
+        carState.aiWaypoints = [{ x: 0, z: 24 }, { x: 16, z: 24 }, { x: 16, z: 15 }];
+        showAiBubble(customSpeech || 'Vezu nás autem zpátky domů k naší vile!');
+      } else {
+        carState.aiWaypoints = [
+          { x: 16, z: 24 }, { x: 70, z: 24 }, { x: 70, z: -60 },
+          { x: -70, z: -60 }, { x: -70, z: 24 }, { x: 16, z: 24 }, { x: 16, z: 15 }
+        ];
+        showAiBubble(customSpeech || 'Jasně, sedám za volant a řídím já! Vezmu nás na okružní jízdu městem Wildwood!');
+      }
+    };
+
+    function aiGoTo(mode, speechText) {
+      aiState.targetMode = mode;
+      if (mode === 'tv') { aiState.targetX = -7.2; aiState.targetZ = 6.5; }
+      else if (mode === 'kitchen') { aiState.targetX = 5.2; aiState.targetZ = 2.5; }
+      else if (mode === 'bedroom') { aiState.targetX = -7.8; aiState.targetZ = -10.5; }
+      else if (mode === 'pool') { aiState.targetX = 6.0; aiState.targetZ = -8.0; }
+      if (speechText) showAiBubble(speechText);
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement === document.getElementById('chatInput')) return;
+      keys[e.code] = true;
+      if (e.code === 'KeyV') toggleVoiceChat();
+      if (e.code === 'KeyE') triggerContextAction();
+      if (e.code === 'KeyH') triggerHorn();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    let currentSpot = null;
+    function triggerContextAction() {
+      const distCar = Math.hypot(playerState.x - carState.x, playerState.z - carState.z);
+      if (carState.driver) {
+        exitCarIfInOne();
+        return;
+      }
+      if (distCar < 6.5) {
+        carState.driver = 'player';
+        showAiBubble(`Sedím vedle tebe v autě (${carState.name})! Řiď pomocí W, A, S, D, nebo řekni "Řiď ty" a pojedu já!`);
+        return;
+      }
+      if (currentSpot) {
+        playerState.x = currentSpot.x;
+        playerState.z = currentSpot.z;
+        playerState.y = currentSpot.sitY + 0.3;
+        playerState.rotY = currentSpot.rotY;
+        if (currentSpot.id === 'couch') {
+          toggleTVPower();
+          aiGoTo('tv', 'Sedám si vedle tebe na gauč a koukáme na televizi!');
+        } else if (currentSpot.id === 'kitchen') {
+          equipItem('pizza');
+          aiEquipProp('pizza');
+          showAiBubble('Dáme si teplou pizzu z kuchyně! Dobrou chuť!');
+        } else if (currentSpot.id === 'bed') {
+          aiGoTo('bedroom', 'Taky si jdu lehnout na vedlejší postel. Dobrou noc!');
+        } else if (currentSpot.id === 'pool') {
+          aiGoTo('pool', 'Voda v bazénu je úplně super!');
+        } else if (currentSpot.id === 'market_buy') {
+          equipItem('bag');
+          showAiBubble('Nakoupili jsme plnou tašku jídla v Supermarketu!');
+        } else if (currentSpot.id === 'school_desk') {
+          showAiBubble('Sedíme ve školní lavici ve Wildwood High School!');
+        } else if (currentSpot.id === 'hospital_bed') {
+          showAiBubble('Doktor v nemocnici tě prohlédl, jsi úplně zdravý!');
+        }
+      }
+    }
+
+    // Camera Orbit Controls
+    let camYaw = 0;
+    let camPitch = 0.45;
+    let isDragging = false, prevX = 0, prevY = 0;
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      isDragging = true; prevX = e.clientX; prevY = e.clientY;
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      camYaw -= (e.clientX - prevX) * 0.007;
+      camPitch = Math.max(0.15, Math.min(1.15, camPitch + (e.clientY - prevY) * 0.006));
+      prevX = e.clientX; prevY = e.clientY;
+    });
+    window.addEventListener('pointerup', () => { isDragging = false; });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animateLimbs(av, cycle, hasProp) {
+      const s = Math.sin(cycle) * 0.55;
+      av.leftLeg.rotation.x = s;
+      av.rightLeg.rotation.x = -s;
+      av.leftArm.rotation.x = -s * 0.8;
+      av.rightArm.rotation.x = hasProp ? -0.7 : s * 0.8;
+    }
+
+    function updateHTMLOverlay(worldPos, elementId) {
+      const vec = worldPos.clone();
+      vec.project(camera);
+      const el = document.getElementById(elementId);
+      if (vec.z > 1) { el.style.opacity = '0'; return; }
+      el.style.opacity = '1';
+      el.style.left = `${(vec.x * 0.5 + 0.5) * window.innerWidth}px`;
+      el.style.top = `${(-(vec.y * 0.5) + 0.5) * window.innerHeight}px`;
+    }
+
+    // =========================================================
+    // 4. MAIN 60 FPS ANIMATION & PHYSICS LOOP
+    // =========================================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (tvOn && Math.random() < 0.03) {
+        const cols = [0x38bdf8, 0x818cf8, 0x34d399, 0xfbbf24];
+        tvScreenMesh.material.color.setHex(cols[Math.floor(Math.random() * cols.length)]);
+      }
+
+      if (partyLightsActive && Math.random() < 0.08) {
+        const pCols = [0xff0055, 0x00ffcc, 0xaa00ff, 0xffff00];
+        homeWarmLight.color.setHex(pCols[Math.floor(Math.random() * pCols.length)]);
+        homeWarmLight.intensity = 2.6;
+      }
+
+      if (carState.hasSiren) {
+        sirenBarMesh.material.color.setHex(Math.sin(Date.now() * 0.015) > 0 ? 0xef4444 : 0x3b82f6);
+      }
+
+      if (danceTimer > 0) {
+        danceTimer--;
+        playerAvatar.root.rotation.y += 0.18;
+        aiAvatar.root.rotation.y += 0.18;
+      }
+
+      let moveFwd = 0, moveRight = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) moveFwd += 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveFwd -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) moveRight += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) moveRight -= 1;
+
+      if (carState.driver === 'player') {
+        if (moveFwd !== 0) {
+          carState.speed = Math.max(-0.35, Math.min(0.7, carState.speed + moveFwd * 0.025));
+        } else {
+          carState.speed *= 0.93;
+        }
+        if (Math.abs(carState.speed) > 0.015) {
+          const dirSign = carState.speed >= 0 ? 1 : -1;
+          carState.rotY -= moveRight * 0.042 * dirSign;
+        }
+        carState.x += -Math.sin(carState.rotY) * carState.speed;
+        carState.z += -Math.cos(carState.rotY) * carState.speed;
+
+        if (!isDragging && Math.abs(carState.speed) > 0.05) {
+          const diff = Math.atan2(Math.sin(carState.rotY - camYaw), Math.cos(carState.rotY - camYaw));
+          camYaw += diff * 0.06;
+        }
+      } else if (carState.driver === 'ai') {
+        if (carState.aiWaypoints.length > 0) {
+          const wp = carState.aiWaypoints[0];
+          const dx = wp.x - carState.x;
+          const dz = wp.z - carState.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 3.5) {
+            carState.aiWaypoints.shift();
+            if (carState.aiWaypoints.length === 0) {
+              carState.speed = 0;
+              const place = getCurrentPlaceName();
+              showAiBubble(`Jsme na místě (${place})! Můžeme vystoupit klávesou E, nebo mi řekni kam pojedeme dál!`);
+            }
+          } else {
+            const targetRot = Math.atan2(-dx, -dz);
+            const angleDiff = Math.atan2(Math.sin(targetRot - carState.rotY), Math.cos(targetRot - carState.rotY));
+            carState.rotY += angleDiff * 0.12;
+            carState.speed = 0.5;
+            carState.x += -Math.sin(carState.rotY) * carState.speed;
+            carState.z += -Math.cos(carState.rotY) * carState.speed;
+          }
+        }
+      }
+
+      if (carState.driver) {
+        carGroup.position.set(carState.x, 0, carState.z);
+        carGroup.rotation.y = carState.rotY;
+
+        const rightX = Math.cos(carState.rotY) * 0.85;
+        const rightZ = -Math.sin(carState.rotY) * 0.85;
+
+        if (carState.driver === 'player') {
+          playerState.x = carState.x - rightX; playerState.y = 0.5; playerState.z = carState.z - rightZ;
+          aiState.x = carState.x + rightX;     aiState.y = 0.5; aiState.z = carState.z + rightZ;
+        } else {
+          aiState.x = carState.x - rightX;     aiState.y = 0.5; aiState.z = carState.z - rightZ;
+          playerState.x = carState.x + rightX; playerState.y = 0.5; playerState.z = carState.z + rightZ;
+        }
+
+        playerAvatar.root.position.set(playerState.x, playerState.y, playerState.z);
+        playerAvatar.root.rotation.y = carState.rotY;
+        aiAvatar.root.position.set(aiState.x, aiState.y, aiState.z);
+        aiAvatar.root.rotation.y = carState.rotY;
+      } else {
+        carGroup.position.set(carState.x, 0, carState.z);
+        carGroup.rotation.y = carState.rotY;
+
+        if (moveFwd !== 0 || moveRight !== 0) {
+          const len = Math.hypot(moveFwd, moveRight);
+          const f = moveFwd / len;
+          const r = moveRight / len;
+          const spd = 0.21;
+          const sinY = Math.sin(camYaw);
+          const cosY = Math.cos(camYaw);
+
+          const vx = (-sinY * f + cosY * r) * spd;
+          const vz = (-cosY * f - sinY * r) * spd;
+
+          playerState.x += vx;
+          playerState.z += vz;
+          playerState.rotY = Math.atan2(-vx, -vz);
+          playerState.walkCycle += 0.24;
+        } else {
+          playerState.walkCycle = 0;
+        }
+
+        playerState.vy -= 0.015;
+        playerState.y += playerState.vy;
+        const baseFloor = (playerState.x > -16 && playerState.x < 12 && playerState.z > -14 && playerState.z < 10) ? 0.3 : 0;
+        if (playerState.y <= baseFloor) {
+          playerState.y = baseFloor;
+          playerState.vy = 0;
+          if (keys['Space']) playerState.vy = 0.27;
+        }
+
+        playerAvatar.root.position.set(playerState.x, playerState.y, playerState.z);
+        if (danceTimer === 0) playerAvatar.root.rotation.y = playerState.rotY;
+        animateLimbs(playerAvatar, playerState.walkCycle, playerAvatar.propMesh.visible);
+
+        // AI Partner Movement
+        let tx = aiState.targetX, tz = aiState.targetZ;
+        if (aiState.targetMode === 'follow') {
+          const dP = Math.hypot(playerState.x - aiState.x, playerState.z - aiState.z);
+          if (dP > 3.2) { tx = playerState.x; tz = playerState.z; }
+          else { tx = aiState.x; tz = aiState.z; }
+        }
+
+        const dx = tx - aiState.x;
+        const dz = tz - aiState.z;
+        const dist = Math.hypot(dx, dz);
+        if (aiState.targetMode !== 'wait' && dist > 0.45) {
+          const spd = Math.min(0.19, dist * 0.09);
+          aiState.x += (dx / dist) * spd;
+          aiState.z += (dz / dist) * spd;
+          aiState.rotY = Math.atan2(-dx, -dz);
+          aiState.walkCycle += 0.22;
+        } else {
+          aiState.walkCycle = 0;
+          if (aiState.targetMode === 'tv') aiState.rotY = 0;
+          else aiState.rotY = Math.atan2(-(playerState.x - aiState.x), -(playerState.z - aiState.z));
+        }
+
+        const aiFloor = (aiState.x > -16 && aiState.x < 12 && aiState.z > -14 && aiState.z < 10) ? 0.3 : 0;
+        aiState.y = aiFloor + (aiState.targetMode === 'tv' && dist < 0.8 ? 0.65 : 0);
+        aiAvatar.root.position.set(aiState.x, aiState.y, aiState.z);
+        if (danceTimer === 0) aiAvatar.root.rotation.y = aiState.rotY;
+        animateLimbs(aiAvatar, aiState.walkCycle, aiAvatar.propMesh.visible);
+      }
+
+      // Check Interactive Furniture & Car Proximity
+      currentSpot = null;
+      for (const s of interactiveSpots) {
+        if (Math.hypot(playerState.x - s.x, playerState.z - s.z) < 4.2) {
+          currentSpot = s;
+          break;
+        }
+      }
+      const distCar = Math.hypot(playerState.x - carState.x, playerState.z - carState.z);
+      const promptEl = document.getElementById('contextPrompt');
+      if (carState.driver) {
+        promptEl.innerText = `🚗 [E] Vystoupit z auta (${carState.driver === 'ai' ? 'Řídí AI parťák' : 'Řídíš ty'})`;
+        promptEl.classList.remove('hidden');
+      } else if (distCar < 6.5) {
+        promptEl.innerText = `🚗 [E] Nasednout do: ${carState.name}`;
+        promptEl.classList.remove('hidden');
+      } else if (currentSpot) {
+        promptEl.innerText = `[E] ${currentSpot.name}`;
+        promptEl.classList.remove('hidden');
+      } else {
+        promptEl.classList.add('hidden');
+      }
+
+      // Smooth Camera Follow
+      const focusX = carState.driver ? carState.x : playerState.x;
+      const focusY = carState.driver ? 0.8 : playerState.y;
+      const focusZ = carState.driver ? carState.z : playerState.z;
+      const camDist = carState.driver ? 18 : 14;
+
+      const targetCamX = focusX + Math.sin(camYaw) * camDist * Math.cos(camPitch);
+      const targetCamY = focusY + 3.2 + Math.sin(camPitch) * camDist;
+      const targetCamZ = focusZ + Math.cos(camYaw) * camDist * Math.cos(camPitch);
+      camera.position.lerp(new THREE.Vector3(targetCamX, targetCamY, targetCamZ), 0.16);
+      camera.lookAt(focusX, focusY + 2.0, focusZ);
+
+      renderer.render(scene, camera);
+
+      updateHTMLOverlay(new THREE.Vector3(aiState.x, aiState.y + 4.5, aiState.z), 'aiLabel');
+      updateHTMLOverlay(new THREE.Vector3(playerState.x, playerState.y + 4.5, playerState.z), 'playerLabel');
+    }
+
+    showAiBubble('Kompletní LifeTogether RP je připravený! Mám teď paměť rozhovoru, rozumím otázkám, hádankám, matice, rolím i řízení po celém městě Wildwood!', false);
+    animate();
+  </script>
+</body>
+</html>
